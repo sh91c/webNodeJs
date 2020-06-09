@@ -2,6 +2,34 @@ var http = require("http"); // http, fs, url등은 모듈이다.
 var fs   = require("fs"); // 모듈들 : nodejs가 갖고있는 수많은 기능들을 비슷한 것끼리 묶어놓은 것.
 var url  = require("url");
 
+function templateHTML(title, list, body){
+    return `
+                <!doctype html>
+                <html>
+                <head>
+                <title>WEB1 - ${title}</title>
+                <meta charset="utf-8">
+                </head>
+                <body>
+                <h1><a href="/">WEB</a></h1>
+                ${list}
+                ${body}
+                </body>
+                </html>
+            `;
+};
+
+function templateList(fileList){
+    var i     = 0;
+    var list  = '<ul>';
+    while(i < fileList.length){
+        list += `<li><a href="/?id=${fileList[i]}">${fileList[i]}</a></li>`;
+        i++;
+    };
+    list     += '</ul>';
+    return list;
+}
+
 var app = http.createServer(function (request, response) {
     var _url      = request.url;
     var queryData = url.parse(_url, true).query; // url을 parse(분석)
@@ -19,60 +47,20 @@ var app = http.createServer(function (request, response) {
                 var description = 'Hello, Node.js';
 
                 // fs.readdir()을 사용해 파일 목록을 불러 링크로 만들기
-                var i     = 0;
-                var list  = '<ul>';
-                while(i < fileList.length){
-                    list += `<li><a href="/?id=${fileList[i]}">${fileList[i]}</a></li>`;
-                    i++;
-                };
-                list     += '</ul>';
+                var list = templateList(fileList);
 
-                var template = `
-                    <!doctype html>
-                    <html>
-                    <head>
-                    <title>WEB1 - ${title}</title>
-                    <meta charset="utf-8">
-                    </head>
-                    <body>
-                    <h1><a href="/">WEB</a></h1>
-                    ${list}
-                    <h2>${title}</h2>
-                    <p>${description}</p>
-                    </body>
-                    </html>
-            `;
+                var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
             response.writeHead(200);
             response.end(template);
             });
         } else {
             fs.readdir('./data/', function(err, fileList){
                 // fs.readdir()을 사용해 파일 목록을 불러 링크로 만들기
-                var i     = 0;
-                var list  = '<ul>';
-                while(i < fileList.length){
-                    list += `<li><a href="/?id=${fileList[i]}">${fileList[i]}</a></li>`;
-                    i++;
-                };
-                list     += '</ul>'; // 링크 끝
+                var list = templateList(fileList);
 
                 fs.readFile(`data/${queryData.id}`, 'utf-8', function(err, description){
                     var title     = queryData.id;
-                    var template = `
-                        <!doctype html>
-                        <html>
-                        <head>
-                        <title>WEB1 - ${title}</title>
-                        <meta charset="utf-8">
-                        </head>
-                        <body>
-                        <h1><a href="/">WEB</a></h1>
-                        ${list}
-                        <h2>${title}</h2>
-                        <p>${description}</p>
-                        </body>
-                        </html>
-                `; // 이 템플릿을 기준으로 HTML 구조가 그려진다..
+                    var template = templateHTML(title, list, `<h2>${title}</h2>${description}`); // 이 템플릿을 기준으로 HTML 구조가 그려진다..
                 response.writeHead(200); // writeHead: 200 - 웹 서버에서 브라우저에게 파일을 성공적으로 전송했다는 뜻
                 response.end(template); // 응답이 완료되었을 때 쿼리 스트링 값에 따라 정보를 출력(또는 어떤 문자열, 데이터등)
                 });
