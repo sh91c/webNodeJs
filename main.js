@@ -41,7 +41,7 @@ var app = http.createServer(function (request, response) {
     // console.log(url.parse(_url, true).pathname);
     if(pathname === '/'){ // 궁금증 : 존재하지 않는 파일경로(쿼리 스트링으로)를 입력했을때 404가 뜨지않고 템플릿이 출력되는 이유가 뭘까...? 일반 경로는 정상적으로 404가 출력이 된다는 것...
         if(queryData.id === undefined){
-            fs.readdir('./data/', function(err, fileList){
+            fs.readdir('./data/', 'utf-8', function(err, fileList){
                 var title       = 'Welcome';
                 var description = 'Hello, Node.js';
                 // fs.readdir()을 사용해 파일 목록을 불러 링크로 만들기
@@ -51,7 +51,7 @@ var app = http.createServer(function (request, response) {
             response.end(template);
             });
         } else {
-            fs.readdir('./data/', function(err, fileList){
+            fs.readdir('./data/', 'utf-8', function(err, fileList){
                 // fs.readdir()을 사용해 파일 목록을 불러 링크로 만들기
                 var list = templateList(fileList);
                 fs.readFile(`data/${queryData.id}`, 'utf-8', function(err, description){
@@ -63,7 +63,7 @@ var app = http.createServer(function (request, response) {
             });
         }
     } else if( pathname === '/create') { // 글 생성 url일 때
-        fs.readdir('./data/', function(err, fileList){
+        fs.readdir('./data/', 'utf-8', function(err, fileList){
             var title       = 'WEB - create';
             var list = templateList(fileList);
             var template = templateHTML(title, list, `
@@ -85,7 +85,8 @@ var app = http.createServer(function (request, response) {
         request.on('data', function(data){
             body += data;
                 // if(body.length > 1e6)
-                //     request.connection.destroy(); 데이터 양이 클 때를 대비해서 접속을 끊는 코드를 작성했지만 여기서는 배제.
+                //     request.connection.destroy(); 데이터 양이 클 때를 대비해서 접속을 끊는 코드를 작성했지만 여기서는 배제.response.writeHead(200);
+        // response.end('success');
         }); // POST로 많은 데이터를 전송할 경우를 대비해서 조각난 데이터를 수신할 때 마다 콜백함수를 호출.. 호출할 때'data'인자를 통해서 수신한 정보를 주기로 약속하고있음.
         request.on('end', function(){
             var post        = qs.parse(body);
@@ -95,7 +96,7 @@ var app = http.createServer(function (request, response) {
             
             // 받은 정보를 파일로 저장 fs.writeFile(file(저장할 위치), data(내용), callback)
             fs.writeFile(`data/${title}`, description, 'utf-8', function(err){
-                response.writeHead(302, {Location: `/?id=${title}`}); // 302 : redirection, 루트를 기준으로 Location 지정
+                response.writeHead(302, {Location: `/?id=${qs.escape(title)}`}); // 302 : redirection, 루트를 기준으로 Location 지정
                 response.end();
             });
         }); // 더이상 들어오는 정보가 없으면 'end'의 콜백함수를 호출. 정보 수신이 끝남.
