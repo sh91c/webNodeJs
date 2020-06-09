@@ -3,7 +3,7 @@ var fs   = require("fs"); // 모듈들 : nodejs가 갖고있는 수많은 기능
 var url  = require("url");
 var qs   = require("querystring");
 
-function templateHTML(title, list, body){
+function templateHTML(title, list, body, control){
     return `
                 <!doctype html>
                 <html>
@@ -14,7 +14,7 @@ function templateHTML(title, list, body){
                 <body>
                 <h1><a href="/">WEB</a></h1>
                 ${list}
-                <a href="/create">create</a>
+                ${control}
                 ${body}
                 </body>
                 </html>
@@ -46,7 +46,9 @@ var app = http.createServer(function (request, response) {
                 var description = 'Hello, Node.js';
                 // fs.readdir()을 사용해 파일 목록을 불러 링크로 만들기
                 var list = templateList(fileList);
-                var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+                var template = templateHTML(title, list
+                    , `<h2>${title}</h2>${description}`
+                    , `<a href="/create">create</a>`); // root에서 update 기능은 제외
             response.writeHead(200);
             response.end(template);
             });
@@ -56,7 +58,11 @@ var app = http.createServer(function (request, response) {
                 var list = templateList(fileList);
                 fs.readFile(`data/${queryData.id}`, 'utf-8', function(err, description){
                     var title     = queryData.id;
-                    var template = templateHTML(title, list, `<h2>${title}</h2>${description}`); // 이 템플릿을 기준으로 HTML 구조가 그려진다..
+                    var template = templateHTML(title, list
+                        , `<h2>${title}</h2>${description}`
+                        , `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`);
+                        // 1.이 템플릿을 기준으로 HTML 구조가 그려진다..
+                        // 2. update(수정)시 쿼리스트링을 사용해 /update?id=${title}로 수정링크를 생성
                 response.writeHead(200); // writeHead: 200 - 웹 서버에서 브라우저에게 파일을 성공적으로 전송했다는 뜻
                 response.end(template); // 응답이 완료되었을 때 쿼리 스트링 값에 따라 정보를 출력(또는 어떤 문자열, 데이터등)
                 });
@@ -76,7 +82,7 @@ var app = http.createServer(function (request, response) {
                         <input type="submit">
                     <p>
                 </form>
-            `);
+            `, '');
         response.writeHead(200);
         response.end(template);
         });
