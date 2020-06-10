@@ -60,9 +60,16 @@ var app = http.createServer(function (request, response) {
                     var title     = queryData.id;
                     var template = templateHTML(title, list
                         , `<h2>${title}</h2>${description}`
-                        , `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`);
+                        , `<a href="/create">create</a>
+                           <a href="/update?id=${title}">update</a>
+                           <form action="/delete_process" method="post" onsubmit="return confirm('do you want to delete this file?')">
+                            <input type="hidden" name="id" value="${title}">
+                            <input type="submit" value="delete">
+                           </form>
+                           `);
                         // 1.이 템플릿을 기준으로 HTML 구조가 그려진다..
                         // 2. update(수정)시 쿼리스트링을 사용해 /update?id=${title}로 수정링크를 생성
+                        // 3. delete는 GET방식으로 구현하면 안된다! POST 방식으로 해야함.
                 response.writeHead(200); // writeHead: 200 - 웹 서버에서 브라우저에게 파일을 성공적으로 전송했다는 뜻
                 response.end(template); // 응답이 완료되었을 때 쿼리 스트링 값에 따라 정보를 출력(또는 어떤 문자열, 데이터등)
                 });
@@ -73,7 +80,7 @@ var app = http.createServer(function (request, response) {
             var title       = 'WEB - create';
             var list = templateList(fileList);
             var template = templateHTML(title, list, `
-                <form action="http://localhost:3000/create_process" method="post">
+                <form action="/create_process" method="post">
                     <p><input type="text" name="title" placeholder="title"></p>
                     <p>
                         <textarea name="description" placeholder="description"></textarea>
@@ -106,6 +113,70 @@ var app = http.createServer(function (request, response) {
                 response.end();
             });
         }); // 더이상 들어오는 정보가 없으면 'end'의 콜백함수를 호출. 정보 수신이 끝남.
+    } else if ( pathname === '/update') {
+        // 글을 수정할 시에 필요한 기능 2가지:
+        // 1. 기존에 작성된 글의 파일을 불러와야함.
+        // 2. form 태그를 사용해 글 또는 내용을 수정할 수 있어야 함.
+        fs.readdir('./data/', 'utf-8', function(err, fileList){
+            var list = templateList(fileList);
+            fs.readFile(`data/${queryData.id}`, 'utf-8', function(err, description){
+                var title     = queryData.id;
+                var template = templateHTML(title, list
+                    , `
+                    <form action="/update_process" method="post">
+                        <!-- 원 글제목을 기준으로 수정을 하지못하게하고 보이지 않도록해야함 -->
+                        <!-- 이 부분 --> <input type="hidden" name="id" value="${title}">
+                        <p><input type="text" name="title" placeholder="title" value="${title}"></p>
+                        <p>
+                            <textarea name="description" placeholder="description">${description}</textarea>
+                        </p>
+                        <p>
+                            <input type="submit">
+                        <p>
+                    </form>
+                    `
+                    , `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`);
+
+            response.writeHead(200);
+            response.end(template);
+            });
+        });
+    } else if( pathname === '/update_process'){
+        // nodejs file rename -> fs.rename(oldPath, newPath, callback(err))
+        var body = '';
+        request.on('data', function(data){
+            body += data;
+        });
+        request.on('end', function(){
+            var post        = qs.parse(body);
+            var id          = post.id;
+            var title       = post.title;
+            var description = post.description;
+            // 1. 사용자가 제목을 변경할 경우 -> title변수로 전달
+            fs.rename(`data/${id}`, `data/${title}`, function(err){
+                // 2. 사용자가 내용을 변경할 경우 -> 파라메터 description로 전달
+                fs.writeFile(`data/${title}`, description, 'utf-8', function(err){
+                    response.writeHead(302, {Location: `/?id=${qs.escape(title)}`});
+                    response.end();
+                });
+            });
+           console.log(post);
+        });
+    } else if( pathname === '/delete_process'){
+        // nodejs file rename -> fs.rename(oldPath, newPath, callback(err))
+        var body = '';
+        request.on('data', function(data){
+            body += data;
+        });
+        request.on('end', function(){
+            var post        = qs.parse(body);
+            var id          = post.id;
+            // 파일 삭제 : fs.unlink(path, callback(err))
+            fs.unlink(`data/${id}`, function () {
+                response.writeHead(302, {Location: `/`}); // 글 삭제 후 루트로 이동
+                response.end();
+            });
+        });
     }
     else {
     response.writeHead(404); // 404 : 파일을 찾을 수 없다
